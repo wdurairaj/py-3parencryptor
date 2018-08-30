@@ -1,0 +1,10 @@
+docs/html
+*.pyc
+.project
+.pydevproject
+*.egg-info
+.tox
+test_bogus_known_hosts_file
+.coverage
+cover
+test/tpdinterface/interface.save
