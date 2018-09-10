@@ -1,23 +1,24 @@
-# py-3parencryptor
+ py-3parencryptor
+ ======================
 
 This package provides the user using HPE 3PAR Array as their storage on platforms like docker, k8s and openshift a functionality by whuch they can encrypt their passwords present in configurstion file (hpe.conf).
 
 hpe.conf is a configuration file for accessing 3PAR array.
 
-## Downloading the package
+Downloading the package
+=======================
 
-Tis package can be downloaded from pip. Use below command for downloading the package.
+Tis package can be downloaded from pip. Use below command for downloading the package::
 
-````
 $pip install py-3parencryptor
-````
 
-### Pre-requisite and Enviornment
-- Linux(CentOS, Ubuntu, Red Hat, etcd)
-- Docker installed
-- etcd container running
-- hpe.conf configured properly on /etc/hpedockerplugin/hpe.conf
-- etcd parameters propelry mentioned in hpe.conf
+Pre-requisite and Enviornment
+=====================================
+* Linux(CentOS, Ubuntu, Red Hat, etcd)
+* Docker installed
+* etcd container running
+* hpe.conf configured properly on /etc/hpedockerplugin/hpe.conf
+* etcd parameters propelry mentioned in hpe.conf
 
 ### Usage
 
