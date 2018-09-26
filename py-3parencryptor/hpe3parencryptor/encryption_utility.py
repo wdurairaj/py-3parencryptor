@@ -13,9 +13,12 @@ LEN16 = 16
 LEN24 = 24
 LEN32 = 32
 
+BACKENDROOT = '/backend'
+backendroot = BACKENDROOT + '/'
+BACKEND = 'DEFAULT'
 
 parser = argparse.ArgumentParser(description='Encryption Tool'
-                                 ,usage='python secret.py [OPTIONS]')
+                                 ,usage='hpe3parencryptor [OPTIONS]')
 
 parser.add_argument ("-a"
                      ,nargs=2,help="key addition, need key and secret",metavar=('key','secret'))
@@ -23,7 +26,15 @@ parser.add_argument ("-a"
 parser.add_argument("-d"
                     ,action='store_true',help="This will delete the key stored")
 
+
+parser.add_argument("--backend", dest='backend',
+                    help="backend name, default is %s" % BACKEND,
+                    default=BACKEND)
+
 args = parser.parse_args()
+
+if args.backend:
+   BACKEND= args.backend 
 
 if len(sys.argv) == 1:
     parser.print_help()
@@ -49,6 +60,13 @@ conf_file = SafeConfigParser()
 conf_file.read("/etc/hpedockerplugin/hpe.conf")
 CONF = conf_file.defaults()
 
+backend_list = conf_file.keys()
+
+if BACKEND not in backend_list:
+    print("BAckend is not present")
+    sys.exit(-1)
+
+
 if len(CONF) == 0:
     print("please Check the hpe.conf file on /etc/hpedockerplugin/ path")
     sys.exit(-1)
@@ -63,6 +81,7 @@ host_etcd_client_key = CONF.get('host_etcd_client_key')
 if host_etcd_ip_address == None or host_etcd_port_number == None:
     print("Please check hpe.conf for host_etcd_ip_address or host_etcd_port_number")
     sys.exit(-1)
+
 
 
 def encrypt(message, passphrase):
@@ -108,24 +127,57 @@ class EtcdUtil(object):
 
 
     def __init__(self, host, port, client_cert, client_key):
-        self.host = host
+        self.host = str(host)
         self.port = port
         self.client_cert = client_cert
         self.client_key = client_key
 
+        #print 'Host %s %s' % (self.host, type(self.host))
+
+        host_tuple = ()
+        if len(self.host) > 0:
+            
+            if ',' in self.host:
+                host_list = [h.strip() for h in host.split(',')]
+
+                for i in host_list:
+                    temp_tuple = (i.split(':')[0], int(i.split(':')[1]))
+                    host_tuple = host_tuple + (temp_tuple,)
+
+                host_tuple = tuple(host_tuple)
+                #print host_tuple
         if client_cert is not None and client_key is not None:
-            self.client = etcd.Client(host=host, port=port, protocol='https',
+            if len(host_tuple) > 0:
+               self.client = etcd.Client(host=host_tuple, port=port,
+                                          protocol='https',
+                                          cert=(client_cert, client_key),
+                                          allow_reconnect=True)
+            else:
+               self.client = etcd.Client(host=host, port=port, protocol='https',
                                       cert=(client_cert, client_key))
 
         else:
-            self.client = etcd.Client(host, port)
+            if len(host_tuple) > 0:
+                #print 'Use http protocol %s %s' % (host_tuple, port)
+                self.client = etcd.Client(host=host_tuple, port=port,
+                                          protocol='http',
+                                          allow_reconnect=True)
+            else:
+                self.client = etcd.Client(host, port)
+
+        try:
+            self.client.read(BACKENDROOT)
+        except etcd.EtcdKeyNotFound:
+            self.client.write(BACKENDROOT, None, dir=True)
+
 
     def set_key(self,key, password):
         if check_plugin_stat() == False:
             try:
-                self.client.read('KEY')
+
+              self.client.read(key)
             except:
-                self.client.write('KEY',password)
+                self.client.write(key,password)
         else:
             print("Plugin is running can not perform the operation")
             print("ABORTING")
@@ -157,23 +209,24 @@ otpt = """ERROR: Not able to connect etcd, this could be because of:
 1. etcd is not running 
 2. host and port in conf file is wrong."""
 
+
+backendkey = backendroot + BACKEND
+
 if args.d == True:
     try:
-        passp = cl.get_key('KEY')
+        passp = cl.get_key(backendkey)
         passp = key_check(passp)
-        x = decrypt(encp,passp)
-        print(x)
-        cl.delete_key('KEY')
+        cl.delete_key(backendkey)
     except etcd.EtcdConnectionFailed:
         print(otpt)
 else:
     key = key_check(args.key)
     ciph_text = encrypt(args.secret, key)
     try:
-        cl.set_key('KEY',args.key)
-        print(args.key)
+        cl.set_key(backendkey,args.key)
+        #print(args.key)
     except :
         print(otpt)
         sys.exit(-1)
     print("SUCCESSFUL: Encrypted password: " + ciph_text)
-
+sys.exit(-1)
