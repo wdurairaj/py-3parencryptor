@@ -1,3 +1,0 @@
-python-etcd
-configparser
-pycrypto

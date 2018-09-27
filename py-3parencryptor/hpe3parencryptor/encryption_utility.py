@@ -7,6 +7,7 @@ from Crypto.Cipher import AES
 import base64
 import sys
 import subprocess
+import os
 
 
 LEN16 = 16
@@ -16,6 +17,9 @@ LEN32 = 32
 BACKENDROOT = '/backend'
 backendroot = BACKENDROOT + '/'
 BACKEND = 'DEFAULT'
+
+CONF_FILE_DIR = '/etc/hpedockerplugin'
+CONF_FILE_NAME = 'hpe.conf'
 
 parser = argparse.ArgumentParser(description='Encryption Tool'
                                  ,usage='hpe3parencryptor [OPTIONS]')
@@ -34,11 +38,11 @@ parser.add_argument("--backend", dest='backend',
 args = parser.parse_args()
 
 if args.backend:
-   BACKEND= args.backend 
+   BACKEND= args.backend
 
 if len(sys.argv) == 1:
     parser.print_help()
-    sys.exit(-1)
+    sys.exit(0)
 
 if args.d == False:
     args.key = args.a[0]
@@ -46,29 +50,28 @@ if args.d == False:
 
     if len(args.secret) == 0 :
         print("Enter valid text and try again")
-        print("ABORTING")
-        sys.exit(-1)
 
     if len(args.key) == 0:
         print("Enter valid key/passphrase")
-        print("ABORTING")
-        sys.exit(-1)
+        
+    print("ABORTING")
+    sys.exit(-1)
 
 
 
 conf_file = SafeConfigParser()
-conf_file.read("/etc/hpedockerplugin/hpe.conf")
+conf_file.read(os.path.join(CONF_FILE_DIR, CONF_FILE_NAME))
 CONF = conf_file.defaults()
 
 backend_list = conf_file.keys()
 
 if BACKEND not in backend_list:
-    print("BAckend is not present")
+    print("Backend is not present")
     sys.exit(-1)
 
 
 if len(CONF) == 0:
-    print("please Check the hpe.conf file on /etc/hpedockerplugin/ path")
+    print("please Check the %s file on %s path" % (CONF_FILE_NAME, CONF_FILE_DIR))
     sys.exit(-1)
 
 
@@ -79,7 +82,7 @@ host_etcd_client_cert = CONF.get('host_etcd_client_cert')
 host_etcd_client_key = CONF.get('host_etcd_client_key')
 
 if host_etcd_ip_address == None or host_etcd_port_number == None:
-    print("Please check hpe.conf for host_etcd_ip_address or host_etcd_port_number")
+    print("Please check %s for host_etcd_ip_address or host_etcd_port_number" % CONF_FILE_NAME)
     sys.exit(-1)
 
 
@@ -107,7 +110,7 @@ def key_check(key):
     elif KEY_LEN > LEN24 and KEY_LEN < LEN32:
         KEY = key + padding_string[:LEN32 - KEY_LEN]
     elif KEY_LEN > LEN32:
-        KEY = key[:LEN32]      
+        KEY = key[:LEN32]
     else:
         KEY = key
 
@@ -132,11 +135,9 @@ class EtcdUtil(object):
         self.client_cert = client_cert
         self.client_key = client_key
 
-        #print 'Host %s %s' % (self.host, type(self.host))
-
         host_tuple = ()
         if len(self.host) > 0:
-            
+
             if ',' in self.host:
                 host_list = [h.strip() for h in host.split(',')]
 
@@ -145,7 +146,7 @@ class EtcdUtil(object):
                     host_tuple = host_tuple + (temp_tuple,)
 
                 host_tuple = tuple(host_tuple)
-                #print host_tuple
+
         if client_cert is not None and client_key is not None:
             if len(host_tuple) > 0:
                self.client = etcd.Client(host=host_tuple, port=port,
@@ -158,7 +159,6 @@ class EtcdUtil(object):
 
         else:
             if len(host_tuple) > 0:
-                #print 'Use http protocol %s %s' % (host_tuple, port)
                 self.client = etcd.Client(host=host_tuple, port=port,
                                           protocol='http',
                                           allow_reconnect=True)
@@ -174,7 +174,6 @@ class EtcdUtil(object):
     def set_key(self,key, password):
         if check_plugin_stat() == False:
             try:
-
               self.client.read(key)
             except:
                 self.client.write(key,password)
@@ -205,8 +204,8 @@ cl = EtcdUtil(host_etcd_ip_address
              ,host_etcd_client_cert
              ,host_etcd_client_key)
 
-otpt = """ERROR: Not able to connect etcd, this could be because of: 
-1. etcd is not running 
+otpt = """ERROR: Not able to connect etcd, this could be because of:
+1. etcd is not running
 2. host and port in conf file is wrong."""
 
 
@@ -224,9 +223,8 @@ else:
     ciph_text = encrypt(args.secret, key)
     try:
         cl.set_key(backendkey,args.key)
-        #print(args.key)
     except :
         print(otpt)
         sys.exit(-1)
     print("SUCCESSFUL: Encrypted password: " + ciph_text)
-sys.exit(-1)
+sys.exit(0)
