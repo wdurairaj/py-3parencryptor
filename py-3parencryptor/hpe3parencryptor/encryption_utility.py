@@ -60,7 +60,6 @@ if args.d == False:
 
 
 conf_file = SafeConfigParser()
-print os.path.join(CONF_FILE_DIR, CONF_FILE_NAME)
 conf_file.read(os.path.join(CONF_FILE_DIR, CONF_FILE_NAME))
 CONF = conf_file.defaults()
 
