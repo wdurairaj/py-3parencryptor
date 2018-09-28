@@ -50,14 +50,14 @@ if args.d == False:
 
     if len(args.secret) == 0 :
         print("Enter valid text and try again")
+        print("ABORTING")
+        sys.exit(-1)
 
     if len(args.key) == 0:
         print("Enter valid key/passphrase")
+        print("ABORTING")
+        sys.exit(-1)
         
-    print("ABORTING")
-    sys.exit(-1)
-
-
 
 conf_file = SafeConfigParser()
 conf_file.read(os.path.join(CONF_FILE_DIR, CONF_FILE_NAME))
