@@ -8,7 +8,7 @@ import base64
 import sys
 import subprocess
 import os
-
+import time
 
 LEN16 = 16
 LEN24 = 24
@@ -164,11 +164,18 @@ class EtcdUtil(object):
                                           allow_reconnect=True)
             else:
                 self.client = etcd.Client(host, port)
-
         try:
             self.client.read(BACKENDROOT)
-        except etcd.EtcdKeyNotFound:
-            self.client.write(BACKENDROOT, None, dir=True)
+        except etcd.EtcdKeyNotFound as e:
+            print('Etcd Key not present: %s' % e)
+            try:
+                self.client.write(BACKENDROOT, None, dir=True)
+            except etcd.EtcdNotFile as e:
+                print('Could be that the key has already been written by a different etcd: %s' % e)
+                print('Retrying READ after a gap of 10 seconds')
+                time.sleep(10)
+                self.client.read(BACKENDROOT)
+                print('Read successful after retry')
 
 
     def set_key(self,key, password):

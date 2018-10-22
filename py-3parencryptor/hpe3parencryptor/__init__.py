@@ -19,7 +19,7 @@ HPE 3PAR Encryption Utility.
 :License: Apache v2.0
 """
 
-version_tuple = (1,0,7)
+version_tuple = (1,0,9)
 
 
 def get_version_string():
